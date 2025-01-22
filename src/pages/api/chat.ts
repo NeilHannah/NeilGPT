@@ -1,9 +1,10 @@
 
 import type { NextApiRequest, NextApiResponse } from "next"
-import { openai } from "@/lib/openai"
+import { openai, validateApiKey, OpenAIError } from "@/lib/openai"
 
 type ResponseData = {
-  response: string
+  response?: string
+  error?: string
 }
 
 export default async function handler(
@@ -15,11 +16,9 @@ export default async function handler(
     return
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(500).json({ response: "OpenAI API key is not configured" })
-  }
-
   try {
+    await validateApiKey()
+    
     const { message } = req.body
 
     const completion = await openai.chat.completions.create({
@@ -36,14 +35,26 @@ export default async function handler(
       ],
       temperature: 0.7,
       max_tokens: 500,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.5
     })
 
-    const response = completion.choices[0]?.message?.content || "I apologize, but I couldn't generate a response."
+    const response = completion.choices[0]?.message?.content
+    
+    if (!response) {
+      throw new Error("No response generated")
+    }
+
     res.status(200).json({ response })
   } catch (error) {
     console.error("Error in chat API:", error)
-    res.status(500).json({ 
-      response: "I apologize, but I encountered an error processing your request."
-    })
+    
+    if (error instanceof OpenAIError) {
+      res.status(500).json({ error: error.message })
+    } else {
+      res.status(500).json({ 
+        error: "An unexpected error occurred. Please try again later."
+      })
+    }
   }
 }
