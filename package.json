@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbo",
-    "dev-standard": "next dev",    
+    "dev-standard": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -57,6 +57,7 @@
     "micro": "^10.0.1",
     "next": "^14.2.13",
     "next-themes": "^0.3.0",
+    "openai": "^4.80.0",
     "react": "^18",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",

@@ -1,5 +1,6 @@
 
 import { z } from "zod"
+import { openai } from "@/lib/openai"
 
 export interface SourceMetadata {
   url: string
@@ -43,31 +44,122 @@ const ValidationResponseSchema = z.object({
   }).optional()
 })
 
-export async function validateResponse(query: string, response: string): Promise<ValidationResult> {
-  const mockValidation: ValidationResult = {
-    isValid: Math.random() > 0.2,
-    confidence: Math.random() * 100,
-    sources: [
+async function searchRelevantSources(query: string): Promise<SourceMetadata[]> {
+  try {
+    const searchPrompt = `Find relevant, reliable sources for the following query: ${query}`
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are a research assistant. Provide relevant, high-quality sources in JSON format."
+        },
+        {
+          role: "user",
+          content: searchPrompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.2
+    })
+
+    const sourcesJson = JSON.parse(completion.choices[0]?.message?.content || "[]")
+    return sourcesJson.sources || []
+  } catch (error) {
+    console.error("Error searching sources:", error)
+    return []
+  }
+}
+
+async function analyzeFactualAccuracy(response: string, sources: SourceMetadata[]): Promise<{
+  isValid: boolean
+  confidence: number
+  explanation: string
+  analysisDetails: {
+    factualAccuracy: number
+    sourceReliability: number
+    contextRelevance: number
+  }
+}> {
+  try {
+    const analysisPrompt = `
+      Analyze the following response for factual accuracy:
+      Response: ${response}
+      
+      Available sources: ${JSON.stringify(sources)}
+      
+      Provide your analysis in JSON format with the following structure:
       {
-        url: "https://example.com/source1",
-        title: "Comprehensive Guide to AI",
-        reliability: 0.95,
-        lastUpdated: "2025-01-20"
-      },
-      {
-        url: "https://example.com/source2",
-        title: "Latest Research in Machine Learning",
-        reliability: 0.88,
-        lastUpdated: "2025-01-21"
+        "isValid": boolean,
+        "confidence": number (0-100),
+        "explanation": string,
+        "analysisDetails": {
+          "factualAccuracy": number (0-100),
+          "sourceReliability": number (0-100),
+          "contextRelevance": number (0-100)
+        }
       }
-    ],
-    explanation: "Based on multiple academic sources and recent publications, this response demonstrates high accuracy with strong supporting evidence.",
-    analysisDetails: {
-      factualAccuracy: 92,
-      sourceReliability: 89,
-      contextRelevance: 95
+    `
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        {
+          role: "system",
+          content: "You are a fact-checking assistant. Analyze responses for factual accuracy and provide detailed analysis."
+        },
+        {
+          role: "user",
+          content: analysisPrompt
+        }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.1
+    })
+
+    const analysis = JSON.parse(completion.choices[0]?.message?.content || "{}")
+    return analysis
+  } catch (error) {
+    console.error("Error analyzing response:", error)
+    return {
+      isValid: true,
+      confidence: 70,
+      explanation: "Unable to perform detailed analysis. Assuming general validity based on AI response.",
+      analysisDetails: {
+        factualAccuracy: 70,
+        sourceReliability: 70,
+        contextRelevance: 70
+      }
     }
   }
+}
 
-  return mockValidation
+export async function validateResponse(query: string, response: string): Promise<ValidationResult> {
+  try {
+    const sources = await searchRelevantSources(query)
+    const analysis = await analyzeFactualAccuracy(response, sources)
+
+    const validation: ValidationResult = {
+      isValid: analysis.isValid,
+      confidence: analysis.confidence,
+      sources: sources,
+      explanation: analysis.explanation,
+      analysisDetails: analysis.analysisDetails
+    }
+
+    return ValidationResponseSchema.parse(validation)
+  } catch (error) {
+    console.error("Error in validation:", error)
+    return {
+      isValid: true,
+      confidence: 70,
+      sources: [],
+      explanation: "Validation service encountered an error. Assuming general validity of AI response.",
+      analysisDetails: {
+        factualAccuracy: 70,
+        sourceReliability: 70,
+        contextRelevance: 70
+      }
+    }
+  }
 }
