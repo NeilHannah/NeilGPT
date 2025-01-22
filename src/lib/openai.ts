@@ -15,13 +15,13 @@ export class OpenAIError extends Error {
   }
 }
 
-const apiKey = process.env.OPENAI_API_KEY
-if (!apiKey) {
+if (!process.env.OPENAI_API_KEY) {
+  console.error("OpenAI API key is missing")
   throw new OpenAIError("NO_API_KEY")
 }
 
 export const openai = new OpenAI({
-  apiKey: apiKey,
+  apiKey: process.env.OPENAI_API_KEY,
   organization: process.env.OPENAI_ORG_ID,
   defaultHeaders: {
     "OpenAI-Beta": "assistants=v1"
@@ -35,9 +35,12 @@ export const openai = new OpenAI({
 
 export async function validateApiKey(): Promise<boolean> {
   try {
-    await openai.models.list()
+    console.log("Testing OpenAI connection...")
+    const models = await openai.models.list()
+    console.log("OpenAI connection successful")
     return true
   } catch (error: any) {
+    console.error("OpenAI connection error:", error)
     if (error?.status === 401) {
       throw new OpenAIError("INVALID_API_KEY")
     }
