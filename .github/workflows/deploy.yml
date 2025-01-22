@@ -9,6 +9,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
+    
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      
     steps:
       - uses: actions/checkout@v3
       
@@ -25,13 +31,24 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_APP_URL: ${{ secrets.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NEXT_PUBLIC_FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_FIREBASE_PROJECT_ID }}
           
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
-        
+
+      - name: Setup Vercel Project
+        run: |
+          vercel link --token=${{ secrets.VERCEL_TOKEN }} --confirm
+          
       - name: Pull Vercel Environment Information
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
         
       - name: Deploy to Vercel
+        run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+        
+      - name: Verify Deployment
         run: |
-          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL=$(vercel --token=${{ secrets.VERCEL_TOKEN }} --confirm)
+          curl --retry 5 --retry-delay 5 --retry-all-errors "$DEPLOY_URL"
