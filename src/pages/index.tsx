@@ -31,26 +31,65 @@ export default function Home() {
       content: "Hello! I'm NeilGPT. How can I assist you today?"
     }
   ])
+  const [isLoading, setIsLoading] = useState(false)
+
+  const generateAIResponse = async (userMessage: string) => {
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: userMessage }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to get AI response")
+      }
+
+      const data = await response.json()
+      return data.response
+    } catch (error) {
+      console.error("Error generating AI response:", error)
+      return "I apologize, but I'm having trouble processing your request right now. Please try again in a moment."
+    }
+  }
 
   const handleSend = async (message: string) => {
+    setIsLoading(true)
     const userMessage: Message = { role: "user", content: message }
-    const assistantResponse = "I'm a demo version of NeilGPT. This is a placeholder response to demonstrate the UI. In a full implementation, this would be connected to an AI model."
     
-    const assistantMessage: Message = {
-      role: "assistant",
-      content: assistantResponse,
-      validation: { isValid: undefined }
+    setMessages(prev => [...prev, userMessage])
+
+    try {
+      const aiResponse = await generateAIResponse(message)
+      
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: aiResponse,
+        validation: { isValid: undefined }
+      }
+
+      setMessages(prev => [...prev, assistantMessage])
+
+      const validation = await validateResponse(message, aiResponse)
+      
+      setMessages(prev => prev.map(msg => 
+        msg === assistantMessage 
+          ? { ...msg, validation }
+          : msg
+      ))
+    } catch (error) {
+      console.error("Error in chat:", error)
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "I apologize, but I encountered an error. Please try again.",
+        validation: { isValid: false }
+      }
+      setMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsLoading(false)
     }
-
-    setMessages(prev => [...prev, userMessage, assistantMessage])
-
-    const validation = await validateResponse(message, assistantResponse)
-    
-    setMessages(prev => prev.map(msg => 
-      msg === assistantMessage 
-        ? { ...msg, validation }
-        : msg
-    ))
   }
 
   const handleSummarize = (summary: string) => {
@@ -81,6 +120,7 @@ export default function Home() {
                 role={message.role}
                 content={message.content}
                 validation={message.validation}
+                isLoading={isLoading && index === messages.length - 1}
               />
             ))}
           </div>
