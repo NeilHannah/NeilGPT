@@ -15,18 +15,13 @@ export class OpenAIError extends Error {
   }
 }
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn(OPENAI_ERROR_MESSAGES.NO_API_KEY)
-}
-
 const apiKey = process.env.OPENAI_API_KEY
-
-if (apiKey === "dummy-key-for-build") {
-  console.warn("Using dummy API key for build process")
+if (!apiKey) {
+  throw new OpenAIError("NO_API_KEY")
 }
 
 export const openai = new OpenAI({
-  apiKey: apiKey || "dummy-key-for-build",
+  apiKey: apiKey,
   organization: process.env.OPENAI_ORG_ID,
   defaultHeaders: {
     "OpenAI-Beta": "assistants=v1"
@@ -39,10 +34,6 @@ export const openai = new OpenAI({
 })
 
 export async function validateApiKey(): Promise<boolean> {
-  if (!apiKey || apiKey === "dummy-key-for-build") {
-    throw new OpenAIError("NO_API_KEY")
-  }
-
   try {
     await openai.models.list()
     return true
