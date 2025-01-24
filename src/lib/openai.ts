@@ -5,7 +5,8 @@ const OPENAI_ERROR_MESSAGES = {
   NO_API_KEY: "OpenAI API key is not configured. Please add your API key to the environment variables.",
   INVALID_API_KEY: "Invalid OpenAI API key. Please check your configuration.",
   RATE_LIMIT: "Rate limit exceeded. Please try again later.",
-  GENERAL_ERROR: "An error occurred while connecting to OpenAI. Please try again."
+  GENERAL_ERROR: "An error occurred while connecting to OpenAI. Please try again.",
+  PREVIEW_KEY: "Preview API keys are not supported. Please use a production API key."
 }
 
 export class OpenAIError extends Error {
@@ -23,15 +24,17 @@ const getOpenAIInstance = () => {
     throw new OpenAIError("NO_API_KEY")
   }
 
+  if (apiKey.startsWith("sk-proj-")) {
+    console.error("Preview API key detected")
+    throw new OpenAIError("PREVIEW_KEY")
+  }
+
   try {
     return new OpenAI({
       apiKey: apiKey,
       organization: process.env.OPENAI_ORG_ID?.trim(),
-      defaultQuery: {
-        "api-version": "2024-01"
-      },
-      maxRetries: 5,
-      timeout: 60000
+      maxRetries: 3,
+      timeout: 30000
     })
   } catch (error) {
     console.error("Error initializing OpenAI:", error)
@@ -52,7 +55,7 @@ export async function validateApiKey(): Promise<boolean> {
   try {
     console.log("Testing OpenAI connection...")
     const instance = openai()
-    const models = await instance.models.list()
+    await instance.models.list()
     console.log("OpenAI connection successful")
     return true
   } catch (error: any) {
