@@ -7,6 +7,7 @@ import { ChatInput } from "@/components/chat/ChatInput"
 import { validateResponse, ValidationResult, SourceMetadata } from "@/services/validationService"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
+import { ApiKeyGuide } from "@/components/ApiKeyGuide"
 
 interface ValidationInfo {
   isValid?: boolean
@@ -36,6 +37,7 @@ export default function Home() {
   ])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showApiGuide, setShowApiGuide] = useState(false)
 
   const generateAIResponse = async (userMessage: string) => {
     try {
@@ -50,6 +52,9 @@ export default function Home() {
       const data = await response.json()
 
       if (!response.ok) {
+        if (data.error?.includes("Preview API")) {
+          setShowApiGuide(true)
+        }
         throw new Error(data.error || "Failed to get AI response")
       }
 
@@ -57,6 +62,7 @@ export default function Home() {
     } catch (error) {
       console.error("Error generating AI response:", error)
       if (error instanceof Error && error.message.includes("Preview API")) {
+        setShowApiGuide(true)
         throw new Error("API Configuration Error: Preview API keys are not supported. Please use a production API key.")
       }
       throw error
@@ -131,18 +137,22 @@ export default function Home() {
               </Alert>
             </div>
           )}
-          <div className="flex-1 overflow-y-auto">
-            {messages.map((message, index) => (
-              <ChatMessage
-                key={index}
-                role={message.role}
-                content={message.content}
-                validation={message.validation}
-                error={message.error}
-                isLoading={isLoading && index === messages.length - 1}
-              />
-            ))}
-          </div>
+          {showApiGuide ? (
+            <ApiKeyGuide />
+          ) : (
+            <div className="flex-1 overflow-y-auto">
+              {messages.map((message, index) => (
+                <ChatMessage
+                  key={index}
+                  role={message.role}
+                  content={message.content}
+                  validation={message.validation}
+                  error={message.error}
+                  isLoading={isLoading && index === messages.length - 1}
+                />
+              ))}
+            </div>
+          )}
           <ChatInput onSend={handleSend} />
         </div>
       </ChatLayout>
