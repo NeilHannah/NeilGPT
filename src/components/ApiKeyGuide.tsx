@@ -1,7 +1,6 @@
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Steps, Step } from "@/components/ui/steps"
 import { ExternalLink } from "lucide-react"
 
 export function ApiKeyGuide() {
