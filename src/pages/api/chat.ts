@@ -16,7 +16,18 @@ export default async function handler(
     return res.status(405).json({ error: "Method not allowed" })
   }
 
+  console.log("API Route - Environment Check:", {
+    hasApiKey: !!process.env.OPENAI_API_KEY,
+    apiKeyLength: process.env.OPENAI_API_KEY?.length,
+    hasOrgId: !!process.env.OPENAI_ORG_ID,
+    nodeEnv: process.env.NODE_ENV
+  })
+
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new OpenAIError("NO_API_KEY")
+    }
+
     console.log("Validating API key...")
     await validateApiKey()
     
@@ -59,20 +70,26 @@ export default async function handler(
     if (error instanceof OpenAIError) {
       return res.status(500).json({ 
         error: error.message,
-        debug: process.env.NODE_ENV === "development" ? { 
+        debug: { 
           apiKeyExists: !!process.env.OPENAI_API_KEY,
-          orgIdExists: !!process.env.OPENAI_ORG_ID
-        } : undefined
+          apiKeyLength: process.env.OPENAI_API_KEY?.length,
+          orgIdExists: !!process.env.OPENAI_ORG_ID,
+          nodeEnv: process.env.NODE_ENV,
+          errorName: error.name,
+          errorMessage: error.message
+        }
       })
     }
 
     return res.status(500).json({ 
       error: "An unexpected error occurred. Please try again later.",
-      debug: process.env.NODE_ENV === "development" ? {
+      debug: {
         message: error instanceof Error ? error.message : "Unknown error",
         apiKeyExists: !!process.env.OPENAI_API_KEY,
-        orgIdExists: !!process.env.OPENAI_ORG_ID
-      } : undefined
+        apiKeyLength: process.env.OPENAI_API_KEY?.length,
+        orgIdExists: !!process.env.OPENAI_ORG_ID,
+        nodeEnv: process.env.NODE_ENV
+      }
     })
   }
 }
