@@ -47,7 +47,7 @@ const ValidationResponseSchema = z.object({
 async function searchRelevantSources(query: string): Promise<SourceMetadata[]> {
   try {
     const searchPrompt = `Find relevant, reliable sources for the following query: ${query}`
-    const completion = await openai.chat.completions.create({
+    const completion = await openai().chat.completions.create({
       model: "gpt-4",
       messages: [
         {
@@ -101,7 +101,7 @@ async function analyzeFactualAccuracy(response: string, sources: SourceMetadata[
       }
     `
 
-    const completion = await openai.chat.completions.create({
+    const completion = await openai().chat.completions.create({
       model: "gpt-4",
       messages: [
         {

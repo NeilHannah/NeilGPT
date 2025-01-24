@@ -37,7 +37,7 @@ export default async function handler(
     }
 
     console.log("Creating chat completion...")
-    const completion = await openai.chat.completions.create({
+    const completion = await openai().chat.completions.create({
       model: "gpt-4",
       messages: [
         {
