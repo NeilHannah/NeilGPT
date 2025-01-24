@@ -15,33 +15,44 @@ export class OpenAIError extends Error {
   }
 }
 
-// Remove the initial check to allow runtime configuration
 const getOpenAIInstance = () => {
-  if (!process.env.OPENAI_API_KEY) {
+  const apiKey = process.env.OPENAI_API_KEY?.trim()
+  
+  if (!apiKey) {
     console.error("OpenAI API key is missing")
     throw new OpenAIError("NO_API_KEY")
   }
 
-  return new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    organization: process.env.OPENAI_ORG_ID,
-    defaultHeaders: {
-      "OpenAI-Beta": "assistants=v1"
-    },
-    defaultQuery: {
-      "api-version": "2024-01"
-    },
-    maxRetries: 3,
-    timeout: 30000
-  })
+  try {
+    return new OpenAI({
+      apiKey: apiKey,
+      organization: process.env.OPENAI_ORG_ID?.trim(),
+      defaultQuery: {
+        "api-version": "2024-01"
+      },
+      maxRetries: 5,
+      timeout: 60000
+    })
+  } catch (error) {
+    console.error("Error initializing OpenAI:", error)
+    throw new OpenAIError("GENERAL_ERROR")
+  }
 }
 
-export const openai = getOpenAIInstance()
+let openaiInstance: OpenAI | null = null
+
+export const openai = (): OpenAI => {
+  if (!openaiInstance) {
+    openaiInstance = getOpenAIInstance()
+  }
+  return openaiInstance
+}
 
 export async function validateApiKey(): Promise<boolean> {
   try {
     console.log("Testing OpenAI connection...")
-    const models = await openai.models.list()
+    const instance = openai()
+    const models = await instance.models.list()
     console.log("OpenAI connection successful")
     return true
   } catch (error: any) {
