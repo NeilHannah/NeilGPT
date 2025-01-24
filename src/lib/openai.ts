@@ -15,23 +15,28 @@ export class OpenAIError extends Error {
   }
 }
 
-if (!process.env.OPENAI_API_KEY) {
-  console.error("OpenAI API key is missing")
-  throw new OpenAIError("NO_API_KEY")
+// Remove the initial check to allow runtime configuration
+const getOpenAIInstance = () => {
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("OpenAI API key is missing")
+    throw new OpenAIError("NO_API_KEY")
+  }
+
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    organization: process.env.OPENAI_ORG_ID,
+    defaultHeaders: {
+      "OpenAI-Beta": "assistants=v1"
+    },
+    defaultQuery: {
+      "api-version": "2024-01"
+    },
+    maxRetries: 3,
+    timeout: 30000
+  })
 }
 
-export const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  organization: process.env.OPENAI_ORG_ID,
-  defaultHeaders: {
-    "OpenAI-Beta": "assistants=v1"
-  },
-  defaultQuery: {
-    "api-version": "2024-01"
-  },
-  maxRetries: 3,
-  timeout: 30000
-})
+export const openai = getOpenAIInstance()
 
 export async function validateApiKey(): Promise<boolean> {
   try {
