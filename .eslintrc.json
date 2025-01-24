@@ -1,3 +1,9 @@
 {
-  "extends": "next"
+  "extends": ["next", "next/core-web-vitals"],
+  "rules": {
+    "react/react-in-jsx-scope": "off", // Next.js doesn't require React to be in scope
+    "no-unused-vars": "warn", // Warns about unused variables
+    "semi": ["error", "always"], // Enforce semicolons
+    "quotes": ["error", "double"] // Enforce double quotes
+  }
 }
