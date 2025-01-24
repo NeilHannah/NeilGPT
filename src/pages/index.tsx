@@ -5,6 +5,8 @@ import { ChatLayout } from "@/components/chat/ChatLayout"
 import { ChatMessage } from "@/components/chat/ChatMessage"
 import { ChatInput } from "@/components/chat/ChatInput"
 import { validateResponse, ValidationResult, SourceMetadata } from "@/services/validationService"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 interface ValidationInfo {
   isValid?: boolean
@@ -22,6 +24,7 @@ interface Message {
   role: "assistant" | "user"
   content: string
   validation?: ValidationInfo
+  error?: string
 }
 
 export default function Home() {
@@ -32,6 +35,7 @@ export default function Home() {
     }
   ])
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const generateAIResponse = async (userMessage: string) => {
     try {
@@ -43,20 +47,25 @@ export default function Home() {
         body: JSON.stringify({ message: userMessage }),
       })
 
+      const data = await response.json()
+
       if (!response.ok) {
-        throw new Error("Failed to get AI response")
+        throw new Error(data.error || "Failed to get AI response")
       }
 
-      const data = await response.json()
       return data.response
     } catch (error) {
       console.error("Error generating AI response:", error)
-      return "I apologize, but I'm having trouble processing your request right now. Please try again in a moment."
+      if (error instanceof Error && error.message.includes("Preview API")) {
+        throw new Error("API Configuration Error: Preview API keys are not supported. Please use a production API key.")
+      }
+      throw error
     }
   }
 
   const handleSend = async (message: string) => {
     setIsLoading(true)
+    setError(null)
     const userMessage: Message = { role: "user", content: message }
     
     setMessages(prev => [...prev, userMessage])
@@ -81,12 +90,13 @@ export default function Home() {
       ))
     } catch (error) {
       console.error("Error in chat:", error)
-      const errorMessage: Message = {
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred. Please try again."
+      setMessages(prev => [...prev, {
         role: "assistant",
-        content: "I apologize, but I encountered an error. Please try again.",
-        validation: { isValid: false }
-      }
-      setMessages(prev => [...prev, errorMessage])
+        content: "",
+        error: errorMessage
+      }])
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -113,6 +123,14 @@ export default function Home() {
       
       <ChatLayout onSummarize={handleSummarize}>
         <div className="flex flex-col min-h-screen">
+          {error && (
+            <div className="p-4">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            </div>
+          )}
           <div className="flex-1 overflow-y-auto">
             {messages.map((message, index) => (
               <ChatMessage
@@ -120,6 +138,7 @@ export default function Home() {
                 role={message.role}
                 content={message.content}
                 validation={message.validation}
+                error={message.error}
                 isLoading={isLoading && index === messages.length - 1}
               />
             ))}

@@ -3,9 +3,10 @@ import { cn } from "@/lib/utils"
 import { Avatar } from "@/components/ui/avatar"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Info, CheckCircle, XCircle, BookOpen, BarChart } from "lucide-react"
+import { AlertCircle, CheckCircle, XCircle, BookOpen } from "lucide-react"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { Progress } from "@/components/ui/progress"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface SourceMetadata {
   url: string
@@ -31,9 +32,21 @@ interface ChatMessageProps {
   content: string
   isLoading?: boolean
   validation?: ValidationInfo
+  error?: string
 }
 
-export function ChatMessage({ role, content, isLoading, validation }: ChatMessageProps) {
+export function ChatMessage({ role, content, isLoading, validation, error }: ChatMessageProps) {
+  if (error) {
+    return (
+      <div className="w-full p-8">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
     <div className={cn(
       "flex w-full gap-4 p-8",
@@ -49,7 +62,11 @@ export function ChatMessage({ role, content, isLoading, validation }: ChatMessag
       </Avatar>
       <Card className="flex-1 shadow-none bg-transparent border-0">
         <div className="prose prose-neutral dark:prose-invert max-w-none">
-          {content}
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="animate-pulse">Generating response...</div>
+            </div>
+          ) : content}
           {role === "assistant" && validation && (
             <div className="mt-4 space-y-3">
               <div className="flex items-center gap-2">
