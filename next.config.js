@@ -6,7 +6,11 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "**",
+        hostname: "example.com", // Replace with specific trusted domains
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.example.com", // Add as needed
       },
     ],
   },
@@ -15,7 +19,11 @@ const nextConfig = {
   poweredByHeader: false,
   generateEtags: true,
   optimizeFonts: true,
-  productionBrowserSourceMaps: false
+  productionBrowserSourceMaps: false,
+  output: "standalone", // Optimizes for serverless deployment
+  experimental: {
+    turbo: true, // Experimental feature for faster builds
+  },
 };
 
 module.exports = nextConfig;
